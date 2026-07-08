@@ -1,6 +1,11 @@
 beautifulsoup4
 fastapi
 google-genai
+langchain
+langchain-core
+langchain-google-genai
+langchain-qdrant
+networkx
 openai
 python-dotenv
 python-multipart
