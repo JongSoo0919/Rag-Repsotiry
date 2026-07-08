@@ -1,0 +1,9 @@
+beautifulsoup4
+fastapi
+google-genai
+openai
+python-dotenv
+python-multipart
+qdrant-client
+requests
+uvicorn
