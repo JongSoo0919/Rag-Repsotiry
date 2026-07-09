@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 from google import genai
 from neo4j import GraphDatabase
 
+from graph.documents import extract_json
+from graph.embedding import create_embedding
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,8 +22,92 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
 LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("EMBEDDING_API_KEY")
 LLM_API_MODEL = os.getenv("LLM_API_MODEL", "gemini-2.5-flash")
 
+ENTITY_MATCH_THRESHOLD = float(os.getenv("GRAPH_ENTITY_MATCH_THRESHOLD", "0.5"))
+
+
+def extract_question_entities(question):
+    """질문에서 그래프 탐색 시작점이 될 엔티티(개념/고유명사) 후보를 뽑는다."""
+    if not LLM_API_KEY:
+        return []
+    client = genai.Client(api_key=LLM_API_KEY)
+    prompt = f'''
+너는 질문에서 Knowledge Graph 탐색의 시작점이 될 엔티티(개념/고유명사/시스템/리소스)를 뽑는 assistant다.
+규칙:
+- 반드시 JSON만 출력한다. markdown code fence 금지.
+- 질문에 실제로 등장하거나 강하게 함의된 핵심 엔티티만 뽑는다.
+- 형식: {{"entities": ["엔티티1", "엔티티2"]}}
+
+질문:
+{question}
+'''.strip()
+    response = client.models.generate_content(model=LLM_API_MODEL, contents=prompt)
+    if not response.text:
+        return []
+    data = extract_json(response.text)
+    entities = data.get("entities", [])
+    if not isinstance(entities, list):
+        return []
+    return [e for e in entities if isinstance(e, str) and e.strip()]
+
+
+def cosine_similarity(vec_a, vec_b):
+    if len(vec_a) != len(vec_b):
+        return 0.0  # 임베딩 차원 불일치는 매칭 실패로 처리(침묵 오류 방지)
+    dot = sum(a * b for a, b in zip(vec_a, vec_b))
+    norm_a = sum(a * a for a in vec_a) ** 0.5
+    norm_b = sum(b * b for b in vec_b) ** 0.5
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return dot / (norm_a * norm_b)
+
+
+def fetch_entity_embeddings(driver):
+    query = """
+    MATCH (e:Entity)
+    WHERE e.tutorial = true AND e.embedding IS NOT NULL
+    RETURN e.id AS id, e.description AS description, e.embedding AS embedding
+    """
+    with driver.session() as session:
+        return [record.data() for record in session.run(query)]
+
+
+def match_entities_to_nodes(driver, question_entities, limit=3):
+    """추출된 엔티티 각각을 노드 임베딩과 코사인 비교해 매칭되는 노드를 고른다."""
+    nodes = fetch_entity_embeddings(driver)
+    if not nodes:
+        return []
+    best = {}  # node_id -> (score, description)
+    for phrase in question_entities:
+        phrase_vec = create_embedding(phrase)
+        scored = sorted(
+            ((cosine_similarity(phrase_vec, n["embedding"]), n) for n in nodes),
+            key=lambda item: item[0],
+            reverse=True,
+        )
+        for score, n in scored[:limit]:
+            if score < ENTITY_MATCH_THRESHOLD:
+                continue
+            if n["id"] not in best or score > best[n["id"]][0]:
+                best[n["id"]] = (score, n["description"])
+    ranked = sorted(best.items(), key=lambda item: item[1][0], reverse=True)
+    return [{"id": node_id, "description": desc} for node_id, (score, desc) in ranked[:limit]]
+
 
 def find_question_entities(driver, question, limit=3):
+    """질문 → LLM 엔티티 추출 → 노드 임베딩 매칭. 키/임베딩/추출 실패 시 CONTAINS로 fallback."""
+    try:
+        question_entities = extract_question_entities(question)
+        if question_entities:
+            matched = match_entities_to_nodes(driver, question_entities, limit=limit)
+            if matched:
+                return matched
+    except Exception:
+        # LLM/임베딩/파싱 실패 → lexical fallback으로 저하 동작
+        pass
+    return find_question_entities_lexical(driver, question, limit=limit)
+
+
+def find_question_entities_lexical(driver, question, limit=3):
     query = """
     MATCH (e:Entity)
     WHERE e.tutorial = true

@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from neo4j import GraphDatabase
 
 from graph.documents import extract_graph_data_with_llm
+from graph.embedding import create_embedding
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -60,7 +61,15 @@ def clear_tutorial_graph(driver):
         )
 
 
-def upsert_nodes(driver, nodes):
+def enrich_nodes_with_embeddings(nodes):
+    enriched = []
+    for node in nodes:
+        text = f"{node['id']}. {node.get('description', '')}"
+        enriched.append({**node, "embedding": create_embedding(text)})
+    return enriched
+
+
+def upsert_nodes(driver, enriched_nodes):
     query = """
     UNWIND $nodes AS node
     MERGE (e:Entity {id: node.id})
@@ -68,14 +77,14 @@ def upsert_nodes(driver, nodes):
         e.type = node.type,
         e.description = node.description,
         e.source_document = node.source_document,
+        e.embedding = node.embedding,
         e.tutorial = true
     MERGE (s:SourceDocument {id: node.source_document})
     SET s.tutorial = true
     MERGE (s)-[:MENTIONS]->(e)
     """
-
     with driver.session() as session:
-        session.run(query, nodes=nodes)
+        session.run(query, nodes=enriched_nodes)
 
 
 def upsert_edges(driver, edges):
@@ -142,8 +151,9 @@ def main():
             raise RuntimeError("Neo4j 연결 테스트에 실패했습니다.")
 
         create_constraints(driver)
-        clear_tutorial_graph(driver)
-        upsert_nodes(driver, nodes)
+        enriched_nodes = enrich_nodes_with_embeddings(nodes)  # 임베딩 먼저(실패해도 clear 전)
+        clear_tutorial_graph(driver)                          # 성공 후에만 삭제
+        upsert_nodes(driver, enriched_nodes)
         upsert_edges(driver, edges)
         print_summary(driver)
     finally:
