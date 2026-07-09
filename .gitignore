@@ -17,8 +17,17 @@ wheels/
 
 # Local runtime data
 qdrant_storage/
+neo4j_data/
+neo4j_logs/
 data/*
 !data/.gitkeep
+private_reports/
 
 # OS / editor
 .DS_Store
+
+# OMC operational artifacts
+.omc/
+
+# 제출용 중복 압축본 (docs/*.md와 동일)
+docs/*.zip
