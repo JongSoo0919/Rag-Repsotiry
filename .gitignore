@@ -21,6 +21,13 @@ neo4j_data/
 neo4j_logs/
 data/*
 !data/.gitkeep
+# 공개 샘플: 커밋 대상 (data/public/ 이하 전체)
+!data/public/
+!data/public/**
+# 비공개 원문: 폴더만 유지하고 내용은 무시 (.gitkeep 제외)
+!data/private/
+data/private/*
+!data/private/.gitkeep
 private_reports/
 
 # OS / editor

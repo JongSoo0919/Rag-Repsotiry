@@ -16,22 +16,26 @@ LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("EMBEDDING_API_KEY")
 LLM_API_MODEL = os.getenv("LLM_API_MODEL", "gemini-2.5-flash")
 
 # 그래프 추출 대상 문서 디렉터리.
-# 현재는 data/sample.md 한 개만 있지만, Confluence 페이지를 data/{page_id}.md 형태로
-# 추가로 저장하면 별도 코드 변경 없이 다중 문서로 확장된다.
+# data/ 하위(공개 샘플 data/public/, 비공개 원문 data/private/, 루트의 sample.md 등)의
+# 모든 .md를 읽는다. 문서를 추가로 넣으면 별도 코드 변경 없이 다중 문서로 확장된다.
+#   - data/public/  : 커밋되는 공개 샘플 (예: k8s-sample)
+#   - data/private/ : gitignore되는 비공개 원문
 DOCUMENTS_DIR = PROJECT_ROOT / "data"
 
 
 # 1. 원본 문서 조각 준비
-# data/ 하위의 .md 파일을 읽어 {문서 ID: 본문} 형태로 반환한다.
-# 문서 ID는 파일명(확장자 제외)을 사용한다.
+# data/ 하위(재귀)의 .md 파일을 읽어 {문서 ID: 본문} 형태로 반환한다.
+# 문서 ID는 data/ 기준 상대경로(확장자 제외)를 사용해 하위 폴더 간 이름 충돌을 피한다.
+# 예: data/sample.md -> "sample", data/public/k8s-sample.md -> "public/k8s-sample"
 def load_documents():
     documents = {}
 
-    for path in sorted(DOCUMENTS_DIR.glob("*.md")):
+    for path in sorted(DOCUMENTS_DIR.rglob("*.md")):
         content = path.read_text(encoding="utf-8").strip()
 
         if content:
-            documents[path.stem] = content
+            doc_id = path.relative_to(DOCUMENTS_DIR).with_suffix("").as_posix()
+            documents[doc_id] = content
 
     if not documents:
         raise RuntimeError(
