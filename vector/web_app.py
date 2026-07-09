@@ -123,6 +123,48 @@ def render_page(question="", answer="", results=None, error=""):
             cursor: pointer;
             font-weight: 700;
           }}
+          .examples {{
+            background: white;
+            border: 1px solid #d9e0e8;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 16px;
+          }}
+          .ex-row {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 8px 0 14px;
+          }}
+          .ex {{
+            padding: 6px 10px;
+            border: 1px solid #c8d0d9;
+            border-radius: 6px;
+            background: #f6f7f9;
+            color: #5f6b7a;
+            font-size: 13px;
+            cursor: pointer;
+          }}
+          .ex:hover {{
+            background: #eef2f5;
+          }}
+          .ex-good {{
+            margin: 0 0 4px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1f6feb;
+          }}
+          .ex-bad {{
+            margin: 16px 0 4px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #b42318;
+          }}
+          .ex-note {{
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: #5f6b7a;
+          }}
         </style>
       </head>
       <body>
@@ -131,9 +173,24 @@ def render_page(question="", answer="", results=None, error=""):
           <p class="meta">collection: {escape(COLLECTION_NAME)}</p>
 
           <form method="post" action="/ask">
-            <textarea name="question" placeholder="질문을 입력하세요">{escaped_question}</textarea>
+            <textarea name="question" placeholder="로그 그래프가 안 그려지는 이유가 뭐야?">{escaped_question}</textarea>
             <button type="submit">질문하기</button>
           </form>
+
+          <section class="examples">
+            <h2>예시 질문</h2>
+            <p class="ex-good">✅ 이 방식이 강한 질문</p>
+            <div class="ex-row">
+              <button type="button" class="ex" onclick="document.forms[0].question.value=this.textContent">로그 그래프가 안 그려지는 이유가 뭐야?</button>
+              <button type="button" class="ex" onclick="document.forms[0].question.value=this.textContent">Alloy 설정에서 무엇이 빠져 있었어?</button>
+            </div>
+            <p class="ex-bad">⚠️ 이 방식이 약한 질문</p>
+            <div class="ex-row">
+              <button type="button" class="ex" onclick="document.forms[0].question.value=this.textContent">Deployment를 외부 통신하려면 어떻게 해야 해?</button>
+              <button type="button" class="ex" onclick="document.forms[0].question.value=this.textContent">Pod, Deployment, Service는 서로 어떤 관계야?</button>
+            </div>
+            <p class="ex-note">의미가 비슷한 문서 chunk를 잘 찾지만, 여러 Entity를 관계로 이어 추론하는 질문엔 약합니다.</p>
+          </section>
 
           {"<section><h2>오류</h2><div class='error'>" + escaped_error + "</div></section>" if error else ""}
           {"<section><h2>답변</h2><div class='answer'>" + escaped_answer + "</div></section>" if answer else ""}

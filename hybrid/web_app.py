@@ -132,6 +132,48 @@ def render_page(question="", answer="", vector_docs=None, entities=None, relatio
             color: #b42318;
             white-space: pre-wrap;
           }}
+          .examples {{
+            background: white;
+            border: 1px solid #d9e0e8;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 16px;
+          }}
+          .ex-row {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 8px 0 14px;
+          }}
+          .ex {{
+            padding: 6px 10px;
+            border: 1px solid #c8d0d9;
+            border-radius: 6px;
+            background: #f6f7f9;
+            color: #5f6b7a;
+            font-size: 13px;
+            cursor: pointer;
+          }}
+          .ex:hover {{
+            background: #eef2f5;
+          }}
+          .ex-good {{
+            margin: 0 0 4px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #256f5b;
+          }}
+          .ex-bad {{
+            margin: 16px 0 4px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #b42318;
+          }}
+          .ex-note {{
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: #5f6b7a;
+          }}
         </style>
       </head>
       <body>
@@ -140,9 +182,24 @@ def render_page(question="", answer="", vector_docs=None, entities=None, relatio
           <p class="meta">흐름: Vector 검색 → Graph 시드/확장 → 종합 답변</p>
 
           <form method="post" action="/ask">
-            <textarea name="question" placeholder="예: Deployment를 외부 통신하려면 어떻게 해야해?">{escape(question)}</textarea>
+            <textarea name="question" placeholder="로그 시각화가 안 나오는데 뭐 때문이고 어떻게 고쳐?">{escape(question)}</textarea>
             <button type="submit">질문하기</button>
           </form>
+
+          <section class="examples">
+            <h2>예시 질문</h2>
+            <p class="ex-good">✅ 이 방식이 강한 질문</p>
+            <div class="ex-row">
+              <button type="button" class="ex" onclick="document.forms[0].question.value=this.textContent">로그 시각화가 안 나오는데 뭐 때문이고 어떻게 고쳐?</button>
+              <button type="button" class="ex" onclick="document.forms[0].question.value=this.textContent">배포한 앱을 외부에서 접속하게 하려면?</button>
+            </div>
+            <p class="ex-bad">⚠️ 이 방식이 약한 질문</p>
+            <div class="ex-row">
+              <button type="button" class="ex" onclick="document.forms[0].question.value=this.textContent">Redis 클러스터 장애 복구 절차는?</button>
+              <button type="button" class="ex" onclick="document.forms[0].question.value=this.textContent">오늘 날씨 어때?</button>
+            </div>
+            <p class="ex-note">표현이 문서와 달라도(vector가 진입 보강) 관계까지 이어 답합니다. 대신 요청당 LLM 호출이 많아 무관한 질문·쿼터 소진에 취약합니다.</p>
+          </section>
 
           {"<section><h2>오류</h2><div class='error'>" + escape(error) + "</div></section>" if error else ""}
           {"<section><h2>답변</h2><div class='answer'>" + escape(answer) + "</div></section>" if answer else ""}
