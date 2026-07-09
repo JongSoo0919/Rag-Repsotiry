@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
+from google import genai
 from neo4j import GraphDatabase
 
 
@@ -14,6 +15,9 @@ load_dotenv(PROJECT_ROOT / ".idea" / ".env")
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+
+LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("EMBEDDING_API_KEY")
+LLM_API_MODEL = os.getenv("LLM_API_MODEL", "gemini-2.5-flash")
 
 
 def find_question_entities(driver, question, limit=3):
@@ -86,17 +90,30 @@ def deduplicate_rows(rows):
     return result
 
 
-def generate_answer(question, entities, relationships):
-    if not entities:
-        return "질문과 관련된 Entity를 찾지 못했습니다."
+def build_graph_context(entities, relationships):
+    """탐색한 Entity/관계를 LLM에 넣을 context 문자열로 만든다."""
+    lines = ["[관련 Entity]"]
 
-    if not relationships:
-        return "관련 Entity는 찾았지만 연결된 관계를 찾지 못했습니다."
+    for entity in entities:
+        description = entity.get("description") or ""
+        lines.append(f"- {entity['id']}: {description}")
 
-    lines = [
-        "그래프 관계 기준 답변:",
-        "",
-    ]
+    lines.append("")
+    lines.append("[관련 관계]")
+
+    for relationship in relationships:
+        lines.append(
+            f"- {relationship['source']} --[{relationship['relation']}]--> "
+            f"{relationship['target']}: {relationship['description']} "
+            f"[source={relationship['source_document']}]"
+        )
+
+    return "\n".join(lines)
+
+
+def format_relationships_only(relationships):
+    """LLM 없이 그래프 관계만 나열하는 fallback 출력."""
+    lines = ["그래프 관계 기준 답변:", ""]
 
     for relationship in relationships:
         lines.append(
@@ -104,18 +121,50 @@ def generate_answer(question, entities, relationships):
             f"{relationship['target']}: {relationship['description']}"
         )
 
-    lines.append("")
-    lines.append("요약:")
-
-    if "deployment" in question.lower() and "외부" in question:
-        lines.append(
-            "Deployment는 Pod와 연결되어 있고, Service-JS는 Pod를 외부 통신 가능하도록 열어준다. "
-            "따라서 Deployment를 외부 통신하려면 Service-JS를 통해 Pod를 노출해야 한다."
-        )
-    else:
-        lines.append("위 관계를 근거로 질문과 관련된 Entity 연결을 확인할 수 있다.")
-
     return "\n".join(lines)
+
+
+def generate_answer(question, entities, relationships):
+    if not entities:
+        return "질문과 관련된 Entity를 찾지 못했습니다."
+
+    if not relationships:
+        return "관련 Entity는 찾았지만 연결된 관계를 찾지 못했습니다."
+
+    context = build_graph_context(entities, relationships)
+
+    # LLM 키가 없으면 그래프 관계만 나열해 최소 동작을 보장한다.
+    if not LLM_API_KEY:
+        return format_relationships_only(relationships)
+
+    client = genai.Client(api_key=LLM_API_KEY)
+
+    prompt = f"""
+너는 Knowledge Graph 기반 질의응답 assistant다.
+
+규칙:
+- 아래 그래프 context(Entity와 관계)만 근거로 답변한다.
+- context에 없는 내용은 "그래프에서 확인할 수 없습니다."라고 답변한다.
+- Entity 사이의 관계 경로를 따라가며 논리적으로 설명한다.
+- 답변은 한국어로 작성한다.
+- 답변 마지막에 근거로 사용한 관계를 bullet로 표시한다.
+
+질문:
+{question}
+
+그래프 context:
+{context}
+""".strip()
+
+    response = client.models.generate_content(
+        model=LLM_API_MODEL,
+        contents=prompt,
+    )
+
+    if not response.text:
+        return format_relationships_only(relationships)
+
+    return response.text
 
 
 def main():

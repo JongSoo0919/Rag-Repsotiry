@@ -5,7 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
 
-from graph.documents import build_fallback_graph_data, extract_graph_data_with_llm
+from graph.documents import extract_graph_data_with_llm
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -108,7 +108,7 @@ def print_summary(driver):
             MATCH (n)
             WHERE n.tutorial = true
             WITH count(n) AS node_count
-            MATCH ()-[r]->()
+            OPTIONAL MATCH ()-[r]->()
             WHERE r.tutorial = true
             RETURN node_count, count(r) AS edge_count
             """
@@ -124,14 +124,7 @@ def print_summary(driver):
 
 
 def load_graph_data():
-    try:
-        return extract_graph_data_with_llm()
-    except RuntimeError as error:
-        if "LLM_API_KEY" in str(error):
-            print("LLM_API_KEY가 없어 fallback graph data를 사용합니다.")
-            print()
-            return build_fallback_graph_data()
-        raise
+    return extract_graph_data_with_llm()
 
 
 def main():
