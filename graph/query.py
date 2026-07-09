@@ -35,6 +35,7 @@ def extract_question_entities(question):
 규칙:
 - 반드시 JSON만 출력한다. markdown code fence 금지.
 - 질문에 실제로 등장하거나 강하게 함의된 핵심 엔티티만 뽑는다.
+- 질문을 최우선 기준으로 삼고, 함께 제공되는 문서 맥락이 있으면 질문과 직접 관련된 엔티티를 고르는 보조 힌트로만 사용한다.
 - 형식: {{"entities": ["엔티티1", "엔티티2"]}}
 
 질문:
@@ -93,8 +94,10 @@ def match_entities_to_nodes(driver, question_entities, limit=3):
     return [{"id": node_id, "description": desc} for node_id, (score, desc) in ranked[:limit]]
 
 
-def find_question_entities(driver, question, limit=3):
-    """질문 → LLM 엔티티 추출 → 노드 임베딩 매칭. 키/임베딩/추출 실패 시 CONTAINS로 fallback."""
+def find_question_entities(driver, question, limit=3, fallback_question=None):
+    """질문 → LLM 엔티티 추출 → 노드 임베딩 매칭. 실패 시 CONTAINS로 fallback.
+    fallback_question: lexical fallback에 쓸 텍스트(기본은 question). 하이브리드에서
+    추출엔 '질문+문서맥락'을, fallback엔 '원 질문'만 쓰도록 분리하는 용도."""
     try:
         question_entities = extract_question_entities(question)
         if question_entities:
@@ -104,7 +107,7 @@ def find_question_entities(driver, question, limit=3):
     except Exception:
         # LLM/임베딩/파싱 실패 → lexical fallback으로 저하 동작
         pass
-    return find_question_entities_lexical(driver, question, limit=limit)
+    return find_question_entities_lexical(driver, fallback_question or question, limit=limit)
 
 
 def find_question_entities_lexical(driver, question, limit=3):

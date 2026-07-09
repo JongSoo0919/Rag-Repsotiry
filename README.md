@@ -90,6 +90,28 @@ docker compose up -d
 
 접속: http://localhost:8002
 
+## Hybrid RAG (Vector→Graph)
+
+`hybrid/`: Vector 검색과 Graph 탐색을 순차로 결합합니다.
+
+1. **Vector**: 질문과 의미가 유사한 문서 chunk를 Qdrant에서 검색합니다.
+2. **Bridge**: 질문 + 검색된 chunk 맥락으로 그래프 시드 엔티티를 찾고 관계를 확장합니다.
+3. **Synthesis**: 벡터 chunk와 그래프 관계를 함께 LLM에 넣어 종합 답변을 생성합니다.
+
+### CLI 질문
+
+```bash
+.venv/bin/python -m hybrid.query '질문을 입력하세요'
+```
+
+### 웹 실행
+
+```bash
+.venv/bin/uvicorn hybrid.web_app:app --host 0.0.0.0 --port 8003
+```
+
+접속: http://localhost:8003
+
 ## 보안
 
 아래 파일과 디렉터리는 커밋하지 않습니다.
