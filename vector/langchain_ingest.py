@@ -9,7 +9,7 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 
-from chucker import split_by_sections
+from vector.chucker import split_by_sections
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

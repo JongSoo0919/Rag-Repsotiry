@@ -3,7 +3,7 @@ from html import escape
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
 
-from query import COLLECTION_NAME, generate_answer, search_chunks
+from vector.query import COLLECTION_NAME, generate_answer, search_chunks
 
 
 app = FastAPI(title="RAG PoC")

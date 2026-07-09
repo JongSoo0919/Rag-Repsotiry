@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from google import genai
 from qdrant_client import QdrantClient
 
-from ingest import create_embedding
+from vector.ingest import create_embedding
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

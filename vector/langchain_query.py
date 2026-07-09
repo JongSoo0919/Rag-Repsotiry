@@ -8,7 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 
-from langchain_ingest import normalize_gemini_embedding_model
+from vector.langchain_ingest import normalize_gemini_embedding_model
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
