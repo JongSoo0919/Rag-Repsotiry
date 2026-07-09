@@ -2,14 +2,14 @@
 
 Confluence 문서를 기반으로 한 Python RAG PoC입니다. 두 가지 검색 방식을 함께 다룹니다.
 
-- **Vector RAG** (`vector/`): 문서를 chunk로 나눠 Qdrant에 임베딩 저장하고, 질문과 유사한 chunk를 검색해 LLM으로 답변합니다.
+- **Vector RAG** (`vector/`): 문서를 chunk로 나눠 Qdrant에 임베딩 저장하고, 질문과 유사한 chunk를 검색해 LLM으로 답변합니다. 임베딩·검색·생성은 LangChain(QdrantVectorStore·retriever·LCEL)을 쓰고, 문서 로딩·청킹만 커스텀(`vector/chucker.py`)입니다.
 - **Graph RAG** (`graph/`): 문서에서 Entity와 관계를 추출해 Neo4j에 저장하고, 그래프 탐색으로 근거를 모아 답변합니다.
 
 ## 구성
 
 ```text
 Vector RAG (Qdrant)
-  Confluence → vector/fetch_confluence_sample.py → data/sample.md
+  Confluence → vector/fetch_confluence_sample.py → data/private/sample.md
              → vector/ingest.py → Qdrant → vector/query.py / vector/web_app.py
 
 Graph RAG (Neo4j)
@@ -46,7 +46,7 @@ docker compose up -d
 ### 데이터 수집 및 저장
 
 ```bash
-.venv/bin/python -m vector.fetch_confluence_sample   # Confluence → data/sample.md
+.venv/bin/python -m vector.fetch_confluence_sample   # Confluence → data/private/sample.md
 .venv/bin/python -m vector.chucker                   # (선택) chunk 분할 미리보기
 .venv/bin/python -m vector.ingest                    # chunk 임베딩 → Qdrant
 ```
@@ -56,13 +56,6 @@ docker compose up -d
 ```bash
 .venv/bin/python -m vector.query '질문을 입력하세요'
 .venv/bin/python -m vector.query --debug '질문을 입력하세요'   # 검색된 근거까지 표시
-```
-
-### LangChain 버전 (별도 collection)
-
-```bash
-.venv/bin/python -m vector.langchain_ingest
-.venv/bin/python -m vector.langchain_query '질문을 입력하세요'
 ```
 
 ### 웹 실행

@@ -3,7 +3,7 @@ from html import escape
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
 
-from vector.query import COLLECTION_NAME, generate_answer, search_chunks
+from vector.query import COLLECTION_NAME, create_retriever, generate_answer
 
 
 app = FastAPI(title="RAG PoC")
@@ -18,15 +18,13 @@ def render_page(question="", answer="", results=None, error=""):
 
     result_items = []
     for index, result in enumerate(results, start=1):
-        payload = result.payload or {}
-        section = escape(payload.get("section", "(section 없음)"))
-        text = escape(payload.get("text", ""))
-        score = result.score
+        section = escape(result.metadata.get("section", "(section 없음)"))
+        text = escape(result.page_content)
 
         result_items.append(
             f"""
             <details>
-              <summary>#{index} {section} · score {score:.4f}</summary>
+              <summary>#{index} {section}</summary>
               <pre>{text}</pre>
             </details>
             """
@@ -154,7 +152,8 @@ def index():
 @app.post("/ask", response_class=HTMLResponse)
 def ask(question: str = Form(...)):
     try:
-        results = search_chunks(question)
+        retriever = create_retriever()
+        results = retriever.invoke(question)
         answer = generate_answer(question, results)
         return render_page(question=question, answer=answer, results=results)
     except Exception as exc:

@@ -13,15 +13,18 @@
 
 | 구분 | 파일 | 상태 | 목적 |
 | --- | --- | --- | --- |
-| Confluence 수집 | `src/fetch_confluence_sample.py` | 완료 | Confluence page 본문 수집 |
-| Chunking | `src/chucker.py` | 완료 | 섹션 기반 chunk 생성 |
-| Vector 저장 | `src/ingest.py` | 완료 | chunk embedding 후 Qdrant 저장 |
-| Vector 질의 | `src/query.py` | 완료 | 질문 embedding 후 검색/답변 |
-| Web UI | `src/web_app.py` | 완료 | 브라우저 기반 질문 화면 |
-| LangChain 저장 | `src/langchain_ingest.py` | 완료 | LangChain 기반 Qdrant 저장 |
-| LangChain 질의 | `src/langchain_query.py` | 완료 | Retriever/Chain 기반 답변 |
-| 수동 Graph | `tutorial/graph.py` | 완료 | Node/Edge 직접 연결 튜토리얼 |
-| 자동 Graph | `tutorial/graph2.py` | 완료 | LLM Entity/Relation 추출 튜토리얼 |
+| Confluence 수집 | `vector/fetch_confluence_sample.py` | 완료 | Confluence page 본문 수집 → `data/private/sample.md` |
+| Chunking | `vector/chucker.py` | 완료 | 섹션/마크다운 헤더 기반 chunk 생성 (커스텀) |
+| Vector 저장 | `vector/ingest.py` | 완료 | LangChain(QdrantVectorStore)로 chunk embedding 저장 |
+| Vector 질의 | `vector/query.py` | 완료 | LangChain retriever + LCEL 체인으로 검색/답변 |
+| Vector Web UI | `vector/web_app.py` | 완료 | 브라우저 기반 질문 화면 |
+| Graph 추출 | `graph/documents.py` | 완료 | LLM으로 문서에서 Entity/Relation 추출 |
+| Graph 저장 | `graph/ingest.py` | 완료 | Neo4j에 노드/관계 + 노드 임베딩 저장 |
+| Graph 질의 | `graph/query.py` | 완료 | LLM 엔티티 추출 + 임베딩 매칭 → 관계 탐색 답변 |
+| Graph Web UI | `graph/web_app.py` | 완료 | 브라우저 기반 질문 화면 |
+| Graph 튜토리얼 | `tutorial/graph.py`, `graph2.py` | 참고 | 초기 개념 학습(현 `graph/` 패키지의 원형) |
+
+> Vector 트랙은 임베딩·벡터스토어·retriever·생성(LCEL)만 LangChain을 쓰고, 문서 로딩·청킹은 커스텀(`vector/chucker.py`)이다. Graph 트랙은 LangChain 없이 raw SDK(`neo4j`, `google-genai`)로 직접 구현했다.
 
 ---
 
