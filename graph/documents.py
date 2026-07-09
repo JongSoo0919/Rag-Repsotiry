@@ -15,32 +15,39 @@ load_dotenv(PROJECT_ROOT / ".idea" / ".env")
 LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("EMBEDDING_API_KEY")
 LLM_API_MODEL = os.getenv("LLM_API_MODEL", "gemini-2.5-flash")
 
-# 그래프 추출 대상 문서 디렉터리.
-# data/ 하위(공개 샘플 data/public/, 비공개 원문 data/private/, 루트의 sample.md 등)의
-# 모든 .md를 읽는다. 문서를 추가로 넣으면 별도 코드 변경 없이 다중 문서로 확장된다.
-#   - data/public/  : 커밋되는 공개 샘플 (예: k8s-sample)
-#   - data/private/ : gitignore되는 비공개 원문
 DOCUMENTS_DIR = PROJECT_ROOT / "data"
+# 그래프 추출 대상 폴더 (명시 지정, 비재귀). 여기 있는 .md만 읽는다.
+#   - data/public/  : 커밋되는 공개 샘플
+#   - data/private/ : gitignore되는 비공개 원문(Loki sample.md 등)
+DOCUMENT_SOURCE_DIRS = [DOCUMENTS_DIR / "public", DOCUMENTS_DIR / "private"]
 
 
 # 1. 원본 문서 조각 준비
-# data/ 하위(재귀)의 .md 파일을 읽어 {문서 ID: 본문} 형태로 반환한다.
+# DOCUMENT_SOURCE_DIRS에 명시된 폴더 각각에서 비재귀로 .md 파일을 읽어
+# {문서 ID: 본문} 형태로 반환한다.
 # 문서 ID는 data/ 기준 상대경로(확장자 제외)를 사용해 하위 폴더 간 이름 충돌을 피한다.
-# 예: data/sample.md -> "sample", data/public/k8s-sample.md -> "public/k8s-sample"
+# 예: data/public/k8s-sample.md -> "public/k8s-sample", data/private/sample.md -> "private/sample"
 def load_documents():
     documents = {}
 
-    for path in sorted(DOCUMENTS_DIR.rglob("*.md")):
-        content = path.read_text(encoding="utf-8").strip()
+    for source_dir in DOCUMENT_SOURCE_DIRS:
+        if not source_dir.is_dir():
+            continue
 
-        if content:
-            doc_id = path.relative_to(DOCUMENTS_DIR).with_suffix("").as_posix()
-            documents[doc_id] = content
+        for path in sorted(source_dir.glob("*.md")):
+            if path.is_symlink():  # data/ 밖을 가리키는 링크 유입 차단
+                continue
+
+            content = path.read_text(encoding="utf-8").strip()
+
+            if content:
+                doc_id = path.relative_to(DOCUMENTS_DIR).with_suffix("").as_posix()
+                documents[doc_id] = content
 
     if not documents:
         raise RuntimeError(
-            f"{DOCUMENTS_DIR} 에서 읽을 .md 문서를 찾지 못했습니다. "
-            f"먼저 vector.fetch_confluence_sample 등으로 문서를 수집하세요."
+            f"{DOCUMENT_SOURCE_DIRS} 에서 읽을 .md 문서를 찾지 못했습니다. "
+            f"data/public/ 또는 data/private/ 에 문서를 넣으세요."
         )
 
     return documents

@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SAMPLE_PATH = PROJECT_ROOT / "data" / "sample.md"
+SAMPLE_PATH = PROJECT_ROOT / "data" / "private" / "sample.md"
 
 
 def split_by_sections(text):

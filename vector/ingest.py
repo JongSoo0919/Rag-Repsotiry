@@ -11,7 +11,7 @@ from qdrant_client.models import Distance, VectorParams, PointStruct
 from vector.chucker import split_by_sections
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SAMPLE_PATH = PROJECT_ROOT / "data" / "sample.md"
+SAMPLE_PATH = PROJECT_ROOT / "data" / "private" / "sample.md"
 
 load_dotenv(PROJECT_ROOT / ".env")
 load_dotenv(PROJECT_ROOT / ".idea" / ".env")

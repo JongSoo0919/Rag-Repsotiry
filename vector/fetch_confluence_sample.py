@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_PATH = PROJECT_ROOT / "data" / "sample.md"
+OUTPUT_PATH = PROJECT_ROOT / "data" / "private" / "sample.md"
 
 load_dotenv(PROJECT_ROOT / ".env")
 load_dotenv(PROJECT_ROOT / ".idea" / ".env")
