@@ -9,11 +9,10 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 
-from vector.chucker import split_by_sections
+from vector.chucker import load_documents, split_by_sections
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SAMPLE_PATH = PROJECT_ROOT / "data" / "private" / "sample.md"
 
 load_dotenv(PROJECT_ROOT / ".env")
 load_dotenv(PROJECT_ROOT / ".idea" / ".env")
@@ -41,29 +40,22 @@ def create_embeddings():
 
 
 def build_documents():
-    text = SAMPLE_PATH.read_text(encoding="utf-8")
-    chunks = split_by_sections(text)
-
     documents = []
     ids = []
-
-    for index, chunk in enumerate(chunks):
-        if chunk["section"] == "metadata":
-            continue
-
-        metadata = {
-            "section": chunk["section"],
-            "source_file": str(SAMPLE_PATH),
-            "chunk_index": index,
-        }
-        document = Document(page_content=chunk["text"], metadata=metadata)
-        point_id = hashlib.md5(
-            f"{SAMPLE_PATH}:{chunk['section']}:{chunk['text']}".encode("utf-8")
-        ).hexdigest()
-
-        documents.append(document)
-        ids.append(point_id)
-
+    for doc_id, text in load_documents():
+        chunks = split_by_sections(text)
+        for index, chunk in enumerate(chunks):
+            if chunk["section"] == "metadata":
+                continue
+            metadata = {
+                "section": chunk["section"],
+                "source_file": doc_id,
+                "chunk_index": index,
+            }
+            documents.append(Document(page_content=chunk["text"], metadata=metadata))
+            ids.append(hashlib.md5(
+                f"{doc_id}:{chunk['section']}:{chunk['text']}".encode("utf-8")
+            ).hexdigest())
     return documents, ids
 
 

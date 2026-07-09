@@ -8,10 +8,9 @@ from openai import OpenAI
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 
-from vector.chucker import split_by_sections
+from vector.chucker import load_documents, split_by_sections
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SAMPLE_PATH = PROJECT_ROOT / "data" / "private" / "sample.md"
 
 load_dotenv(PROJECT_ROOT / ".env")
 load_dotenv(PROJECT_ROOT / ".idea" / ".env")
@@ -87,33 +86,26 @@ def main():
 
     ensure_collection(qdrant, vector_size)
 
-    text = SAMPLE_PATH.read_text(encoding="utf-8")
-    chunks = split_by_sections(text)
-
     points = []
-
-    for index, chunk in enumerate(chunks):
-        if chunk["section"] == "metadata":
-            continue
-
-        embedding = create_embedding(chunk["text"])
-
-        point_id = hashlib.md5(
-            f"{SAMPLE_PATH}:{chunk['section']}:{chunk['text']}".encode("utf-8")
-        ).hexdigest()
-
-        point = PointStruct(
-            id=point_id,
-            vector=embedding,
-            payload={
-                "section": chunk["section"],
-                "text": chunk["text"],
-                "source_file": str(SAMPLE_PATH),
-                "chunk_index": index,
-            },
-        )
-
-        points.append(point)
+    for doc_id, text in load_documents():
+        chunks = split_by_sections(text)
+        for index, chunk in enumerate(chunks):
+            if chunk["section"] == "metadata":
+                continue
+            embedding = create_embedding(chunk["text"])
+            point_id = hashlib.md5(
+                f"{doc_id}:{chunk['section']}:{chunk['text']}".encode("utf-8")
+            ).hexdigest()
+            points.append(PointStruct(
+                id=point_id,
+                vector=embedding,
+                payload={
+                    "section": chunk["section"],
+                    "text": chunk["text"],
+                    "source_file": doc_id,
+                    "chunk_index": index,
+                },
+            ))
 
     qdrant.upsert(
         collection_name=COLLECTION_NAME,
