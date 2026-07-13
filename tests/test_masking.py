@@ -89,3 +89,12 @@ def test_phone_variants_masked():
 def test_masking_idempotent():
     once = mask_text("메일 a@b.com IP 10.0.0.1 password: pw123")
     assert mask_text(once) == once
+
+
+def test_long_digit_id_not_masked():
+    # 긴 숫자 ID(Confluence 페이지 ID 등)를 전화번호로 오인하지 않는다
+    assert mask_text('page_id: "3198713899"') == 'page_id: "3198713899"'
+    assert "[PHONE]" not in mask_text("3198713899")
+    assert "[PHONE]" not in mask_text("pages/3178758311")
+    # 진짜 전화번호는 여전히 마스킹
+    assert "[PHONE]" in mask_text("문의 010-1234-5678 로")

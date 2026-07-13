@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from neo4j import GraphDatabase
 
 from graph.documents import extract_graph_data_with_llm
-from graph.embedding import create_embedding
+from graph.embedding import create_embeddings
 from preprocessing.aliases import normalize as normalize_entity
 
 
@@ -63,11 +63,10 @@ def clear_tutorial_graph(driver):
 
 
 def enrich_nodes_with_embeddings(nodes):
-    enriched = []
-    for node in nodes:
-        text = f"{node['id']}. {node.get('description', '')}"
-        enriched.append({**node, "embedding": create_embedding(text)})
-    return enriched
+    # 노드별 개별 호출 대신 배치로 임베딩(분당 rate limit 회피)
+    texts = [f"{node['id']}. {node.get('description', '')}" for node in nodes]
+    vectors = create_embeddings(texts)
+    return [{**node, "embedding": vector} for node, vector in zip(nodes, vectors, strict=True)]
 
 
 def upsert_nodes(driver, enriched_nodes):
