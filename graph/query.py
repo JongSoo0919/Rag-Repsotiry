@@ -8,6 +8,8 @@ from neo4j import GraphDatabase
 
 from graph.documents import extract_json
 from graph.embedding import create_embedding
+from preprocessing.aliases import normalize as normalize_entity
+from preprocessing.aliases import build_alias_map
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -99,7 +101,8 @@ def find_question_entities(driver, question, limit=3, fallback_question=None):
     fallback_question: lexical fallback에 쓸 텍스트(기본은 question). 하이브리드에서
     추출엔 '질문+문서맥락'을, fallback엔 '원 질문'만 쓰도록 분리하는 용도."""
     try:
-        question_entities = extract_question_entities(question)
+        # 질문에서 뽑은 표기도 사전 기준으로 통일(예: "k8s" -> "Kubernetes")해 노드와 매칭
+        question_entities = [normalize_entity(e) for e in extract_question_entities(question)]
         if question_entities:
             matched = match_entities_to_nodes(driver, question_entities, limit=limit)
             if matched:
@@ -108,6 +111,14 @@ def find_question_entities(driver, question, limit=3, fallback_question=None):
         # LLM/임베딩/파싱 실패 → lexical fallback으로 저하 동작
         pass
     return find_question_entities_lexical(driver, fallback_question or question, limit=limit)
+
+
+def _expand_with_aliases(question):
+    """질문에 별칭(k8s 등)이 들어있으면 정식명칭(Kubernetes)을 덧붙여,
+    canonical로 저장된 노드도 lexical 매칭되게 한다."""
+    lowered = question.lower()
+    extras = sorted({canonical for alias, canonical in build_alias_map().items() if alias in lowered})
+    return question + " " + " ".join(extras) if extras else question
 
 
 def find_question_entities_lexical(driver, question, limit=3):
@@ -124,8 +135,9 @@ def find_question_entities_lexical(driver, question, limit=3):
     LIMIT $limit
     """
 
+    expanded = _expand_with_aliases(question)
     with driver.session() as session:
-        return [record.data() for record in session.run(query, question=question, limit=limit)]
+        return [record.data() for record in session.run(query, question=expanded, limit=limit)]
 
 
 def retrieve_graph_context(driver, entity_ids, depth=2):
