@@ -1,0 +1,67 @@
+# =============================================================================
+# 평가 골든셋 — 질문 + 기대 결과. 나중에 "수치 차이"를 보기 위한 고정 기준.
+# =============================================================================
+# 현재 샘플 2문서(public/k8s-sample, private/sample) 기준으로 작성.
+# 데이터가 늘면 케이스를 추가하되, 기존 id/question은 바꾸지 말 것(회귀 비교선 유지).
+#
+# 필드
+#   id                    : 고유 식별자(회귀 비교 키). 변경 금지.
+#   question              : 실제 질의
+#   expect_sources        : 답에 쓰여야 할 출처 문서 id(부분일치 아님, 정확 id)
+#   expect_entities       : 그래프에서 잡혀야 할 엔티티 id (graph/hybrid만 채점). 질문에서 매칭 가능한
+#                            진입 엔티티만. 관계 탐색으로 도달하는 엔티티는 여기 넣지 말 것.
+#   expect_answer_contains: 답변에 반드시 등장할 핵심어(대소문자 무시 부분일치)
+#   expect_refusal        : true면 "정답 없음" 케이스 — 환각 없이 거부/무근거여야 통과
+#   best_track            : 이 질문에서 강할 것으로 기대하는 트랙(관찰용)
+#   tags                  : 분류
+# =============================================================================
+
+- id: loki-viz-cause
+  question: "로그 시각화가 표시되지 않아"
+  expect_sources: [private/sample]
+  expect_entities: [Loki Dashboard]
+  expect_answer_contains: [Label]
+  best_track: hybrid
+  tags: [causal, phrasing-mismatch]
+
+- id: deploy-external
+  question: "Deployment를 외부 통신하려면 어떻게 해야 해?"
+  expect_sources: [public/k8s-sample]
+  expect_entities: [Deployment]
+  expect_answer_contains: [Service]
+  best_track: graph
+  tags: [relation]
+
+- id: dashboard-label-cause
+  question: "대시보드 쿼리에서 라벨 문제 원인이 뭐야?"
+  expect_sources: [private/sample]
+  expect_entities: []
+  expect_answer_contains: [Label]
+  best_track: vector
+  tags: [descriptive]
+
+- id: k8s-alias-external
+  question: "k8s에서 파드를 외부로 열려면 뭘 써야 해?"
+  expect_sources: [public/k8s-sample]
+  expect_entities: [Pod]
+  expect_answer_contains: [Service]
+  best_track: graph
+  tags: [alias, relation]
+
+- id: negative-offdomain
+  question: "블록체인 합의 알고리즘 설정법 알려줘"
+  expect_sources: []
+  expect_entities: []
+  expect_answer_contains: []
+  expect_refusal: true
+  best_track: any
+  tags: [negative, hallucination-guard]
+
+- id: negative-domain-adjacent
+  question: "Ingress TLS 인증서 갱신 주기가 어떻게 돼?"
+  expect_sources: []
+  expect_entities: []
+  expect_answer_contains: []
+  expect_refusal: true
+  best_track: any
+  tags: [negative, domain-adjacent]

@@ -35,6 +35,9 @@ private_reports/
 # OS / editor
 .DS_Store
 
+# 평가 실행 결과 (private 문서 답변이 섞일 수 있어 미추적)
+evaluation/reports/
+
 # OMC operational artifacts
 .omc/
 

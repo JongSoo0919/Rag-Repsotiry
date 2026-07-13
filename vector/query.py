@@ -98,6 +98,7 @@ def generate_answer(question, documents):
     llm = ChatGoogleGenerativeAI(
         model=LLM_API_MODEL,
         google_api_key=LLM_API_KEY,
+        temperature=0,
     )
     chain = prompt | llm | StrOutputParser()
 

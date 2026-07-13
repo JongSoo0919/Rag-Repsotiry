@@ -5,6 +5,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -133,6 +134,7 @@ def extract_graph_data_with_llm(documents=None):
     response = client.models.generate_content(
         model=LLM_API_MODEL,
         contents=build_extraction_prompt(documents),
+        config=types.GenerateContentConfig(temperature=0),
     )
 
     if not response.text:

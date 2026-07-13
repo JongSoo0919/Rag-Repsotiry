@@ -4,6 +4,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 from neo4j import GraphDatabase
 
 from graph.documents import extract_json
@@ -43,7 +44,11 @@ def extract_question_entities(question):
 질문:
 {question}
 '''.strip()
-    response = client.models.generate_content(model=LLM_API_MODEL, contents=prompt)
+    response = client.models.generate_content(
+        model=LLM_API_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(temperature=0),
+    )
     if not response.text:
         return []
     data = extract_json(response.text)
@@ -261,6 +266,7 @@ def generate_answer(question, entities, relationships):
     response = client.models.generate_content(
         model=LLM_API_MODEL,
         contents=prompt,
+        config=types.GenerateContentConfig(temperature=0),
     )
 
     if not response.text:
