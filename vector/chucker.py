@@ -1,6 +1,8 @@
 import re
 from pathlib import Path
 
+from preprocessing.masking import mask_text
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -17,10 +19,10 @@ def load_documents():
     for source_dir in DOCUMENT_SOURCE_DIRS:
         if not source_dir.is_dir():
             continue
-        for path in sorted(source_dir.glob("*.md")):
-            if path.is_symlink():
-                continue
-            content = path.read_text(encoding="utf-8")
+        for path in sorted(source_dir.rglob("*.md")):
+            if path.is_symlink() or any(part.startswith("_") for part in path.relative_to(source_dir).parts):
+                continue  # 재귀 + 링크 차단 + _ 접두 파일/폴더(메타) 제외
+            content = mask_text(path.read_text(encoding="utf-8"))  # 적재 전 민감정보 마스킹
             if content.strip():
                 doc_id = path.relative_to(DATA_DIR).with_suffix("").as_posix()
                 documents.append((doc_id, content))

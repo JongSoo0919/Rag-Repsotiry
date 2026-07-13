@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+from preprocessing.masking import mask_text
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,11 +37,11 @@ def load_documents():
         if not source_dir.is_dir():
             continue
 
-        for path in sorted(source_dir.glob("*.md")):
-            if path.is_symlink():  # data/ 밖을 가리키는 링크 유입 차단
-                continue
+        for path in sorted(source_dir.rglob("*.md")):
+            if path.is_symlink() or any(part.startswith("_") for part in path.relative_to(source_dir).parts):
+                continue  # 재귀 + 링크 차단 + _ 접두 파일/폴더(메타) 제외
 
-            content = path.read_text(encoding="utf-8").strip()
+            content = mask_text(path.read_text(encoding="utf-8")).strip()  # 적재 전 마스킹
 
             if content:
                 doc_id = path.relative_to(DOCUMENTS_DIR).with_suffix("").as_posix()
