@@ -19,6 +19,7 @@
 ## 📑 목차
 
 - [소개](#-소개)
+- [추가 구현](#-추가-구현)
 - [세 가지 RAG 한눈에 비교](#-세-가지-rag-한눈에-비교)
 - [아키텍처](#-아키텍처)
 - [빠른 시작](#-빠른-시작)
@@ -43,6 +44,22 @@
 | **Hybrid RAG** | Vector→Graph 순차 | Qdrant + Neo4j | 벡터로 진입점 찾고 그래프로 관계 확장 |
 
 > **설계 의도**: `vector/`는 LangChain 추상화로, `graph/`는 raw SDK(neo4j·google-genai)로 구현해 **"프레임워크가 무엇을 대신해 주는가"** 를 대조합니다. `hybrid/`는 두 트랙을 재사용해 결합합니다.
+
+---
+
+## ✨ 추가 구현
+
+3트랙 위에 **실데이터를 안전·검증 가능하게** 다루는 층을 더했습니다.
+
+| 기능 | 설명 |
+| --- | --- |
+| 🔒 **민감정보 마스킹** (`preprocessing/masking.py`) | 적재 시점에 email·전화·IP·비밀번호·토큰·DB 자격증명을 결정론 정규식으로 치환 → 원문이 벡터DB·그래프·외부 LLM으로 나가지 않음 (다중 방어: 문서 선택 제외 → 마스킹 → gitignore) |
+| 🧩 **약어/동의어 정규화** (`preprocessing/aliases.py`) | `k8s=Kubernetes`처럼 표기를 통일해 그래프 노드 분산 방지. 공통용어(public)+도메인약어(private) 분리, 반자동 후보탐지 + 사람 검토 |
+| 📊 **평가 하네스** (`evaluation/`) | 골든셋 + 순수 채점(source/entity recall·근거·환각). 데이터셋·채점은 무외부호출·결정론 → 데이터/코드 변경 시 회귀 비교 |
+| 🖥 **통합 웹 + 그래프 탐색** (`web_app.py`) | 3트랙을 탭 하나로 통합(`:8000`), Neo4j 지식그래프를 vis-network로 인터랙티브 시각화하는 탐색 탭 |
+| ⚡ **배치 임베딩** (`graph/embedding.py`) | 노드 임베딩을 배치 호출 + 429 재시도로 무료 티어 rate limit 회피 |
+
+> 프로젝트 개요·설계 결정·문제 해결 사례 정리 → **[PORTFOLIO.md](PORTFOLIO.md)**
 
 ---
 
@@ -157,7 +174,10 @@ podman run -d --name rag-poc-neo4j -p 7474:7474 -p 7687:7687 \
 .venv/bin/python -m graph.query  'Deployment를 외부 통신하려면 어떻게 해야 해?'
 .venv/bin/python -m hybrid.query '로그 시각화가 안 나오는데 뭐 때문이고 어떻게 고쳐?'
 
-# 웹 (각각 별도 포트)
+# 통합 웹 (권장) — 3트랙 탭 + 그래프 탐색을 한 포트에서
+QDRANT_COLLECTION=rag_poc_chunks_gemini .venv/bin/uvicorn web_app:app --port 8000   # http://localhost:8000
+
+# 트랙별 웹 (개별 포트, 선택)
 .venv/bin/uvicorn vector.web_app:app --port 8001   # http://localhost:8001
 .venv/bin/uvicorn graph.web_app:app  --port 8002   # http://localhost:8002
 .venv/bin/uvicorn hybrid.web_app:app --port 8003   # http://localhost:8003

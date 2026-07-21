@@ -20,7 +20,7 @@ def test_ipv4_masked():
 
 def test_version_not_masked():
     # 버전번호(3파트)는 IP로 오인하지 않는다
-    assert mask_text("Contrabass 3.0.6 릴리스") == "Contrabass 3.0.6 릴리스"
+    assert mask_text("SampleApp 3.0.6 릴리스") == "SampleApp 3.0.6 릴리스"
 
 
 def test_date_not_masked():
